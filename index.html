@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1a1410">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Island Crowns — Kingdom Simulator</title>
+<style>
+  :root {
+    --bg: #15110d;
+    --panel: #211a14;
+    --panel2: #2b221a;
+    --border: #4a3826;
+    --gold: #d4a843;
+    --text: #e8dcc8;
+    --dim: #9c8c74;
+    --good: #7fb069;
+    --bad: #d1604f;
+    --accent: #b8762e;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-t: env(safe-area-inset-top, 0px);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overscroll-behavior: none; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 16px;
+    line-height: 1.45;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  #app { display: flex; flex-direction: column; height: 100dvh; max-width: 560px; margin: 0 auto; }
+
+  /* ---------- Header ---------- */
+  header {
+    padding: calc(8px + var(--safe-t)) 12px 8px;
+    background: linear-gradient(#26201a, #1c1611);
+    border-bottom: 2px solid var(--border);
+    flex-shrink: 0;
+  }
+  .hrow { display: flex; justify-content: space-between; align-items: baseline; }
+  .hrow h1 { font-size: 17px; color: var(--gold); letter-spacing: 1px; font-weight: normal; }
+  .hrow .year { font-size: 15px; color: var(--dim); }
+  .resbar {
+    display: grid; grid-template-columns: repeat(6, 1fr);
+    gap: 4px; margin-top: 6px; text-align: center;
+  }
+  .res { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 3px 1px; }
+  .res .ic { font-size: 14px; display: block; line-height: 1.2; }
+  .res .v { font-size: 13px; font-variant-numeric: tabular-nums; }
+  .statbar { display: flex; gap: 10px; margin-top: 5px; font-size: 12.5px; color: var(--dim); flex-wrap: wrap; }
+  .statbar b { color: var(--text); font-weight: normal; }
+
+  /* ---------- Main ---------- */
+  main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px 12px 20px; }
+  .tabpane { display: none; }
+  .tabpane.active { display: block; animation: fadein .18s ease; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+
+  h2 { font-size: 16px; color: var(--gold); margin: 14px 0 8px; font-weight: normal; letter-spacing: .5px; }
+  h2:first-child { margin-top: 0; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px; margin-bottom: 10px;
+  }
+  .card .title { color: var(--gold); font-size: 15px; margin-bottom: 4px; }
+  .card .sub { color: var(--dim); font-size: 13.5px; }
+  .muted { color: var(--dim); font-size: 13.5px; }
+  .small { font-size: 13px; }
+
+  /* ---------- Buttons ---------- */
+  button {
+    font-family: inherit; font-size: 15px; color: var(--text);
+    background: linear-gradient(#3a2d20, #2b2014);
+    border: 1px solid var(--border); border-radius: 9px;
+    padding: 12px 14px; width: 100%; text-align: left;
+    cursor: pointer; margin-bottom: 8px; line-height: 1.35;
+  }
+  button:active { transform: scale(.985); background: #241a10; }
+  button:disabled { opacity: .42; pointer-events: none; }
+  button .bt { display: block; }
+  button .bs { display: block; font-size: 12.5px; color: var(--dim); margin-top: 2px; }
+  button.primary { background: linear-gradient(#8a5a1e, #6e4514); border-color: #a87b35; text-align: center; }
+  button.compact { width: auto; padding: 9px 14px; margin: 0; text-align: center; }
+  .btnrow { display: flex; gap: 8px; }
+  .btnrow button { flex: 1; text-align: center; }
+
+  .chiprow { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .chip {
+    padding: 8px 13px; border-radius: 20px; border: 1px solid var(--border);
+    background: var(--panel); font-size: 14px; color: var(--dim); width: auto; margin: 0;
+  }
+  .chip.sel { background: var(--accent); color: #fff; border-color: var(--gold); }
+
+  .stepper { display: flex; align-items: center; gap: 8px; margin: 6px 0 10px; }
+  .stepper button { width: 46px; height: 42px; padding: 0; text-align: center; font-size: 20px; margin: 0; flex-shrink: 0; }
+  .stepper .num { flex: 1; text-align: center; font-size: 17px; background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 0; }
+
+  /* ---------- Bars ---------- */
+  .meter { height: 8px; background: #0d0a07; border-radius: 4px; overflow: hidden; margin-top: 4px; border: 1px solid #00000060; }
+  .meter > div { height: 100%; border-radius: 4px; transition: width .3s; }
+
+  /* ---------- Nations ---------- */
+  .nation { display: flex; justify-content: space-between; align-items: center; }
+  .relval { font-size: 14px; font-variant-numeric: tabular-nums; }
+
+  /* ---------- Footer ---------- */
+  footer {
+    flex-shrink: 0; border-top: 2px solid var(--border);
+    background: #1c1611; padding: 6px 8px calc(8px + var(--safe-b));
+  }
+  .actiondots { display: flex; justify-content: center; gap: 14px; padding: 2px 0 6px; font-size: 11.5px; color: var(--dim); }
+  .actiondots span.done { color: var(--good); }
+  nav { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  nav button {
+    margin: 0; padding: 8px 2px; text-align: center; font-size: 11.5px;
+    background: var(--panel); border-radius: 8px; color: var(--dim);
+  }
+  nav button .nic { display: block; font-size: 19px; line-height: 1.25; }
+  nav button.active { background: var(--panel2); color: var(--gold); border-color: var(--gold); }
+  nav button.endbtn { background: linear-gradient(#7a4f1a, #5e3c10); color: #f5e6c8; border-color: #a87b35; }
+
+  /* ---------- Modal ---------- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(8,6,4,.82);
+    display: none; align-items: flex-end; justify-content: center; z-index: 50;
+  }
+  .overlay.show { display: flex; }
+  .modal {
+    background: var(--panel2); border: 1px solid var(--gold); border-bottom: none;
+    border-radius: 16px 16px 0 0; padding: 18px 16px calc(18px + var(--safe-b));
+    width: 100%; max-width: 560px; max-height: 86dvh; overflow-y: auto;
+    animation: slideup .22s ease;
+  }
+  @keyframes slideup { from { transform: translateY(40px); opacity: .4; } to { transform: none; opacity: 1; } }
+  .modal h3 { color: var(--gold); font-size: 18px; margin-bottom: 8px; font-weight: normal; }
+  .modal p { margin-bottom: 14px; font-size: 15px; color: var(--text); }
+  .eventtag { display: inline-block; font-size: 11px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; margin-bottom: 6px; }
+
+  /* ---------- Log ---------- */
+  .log { font-size: 13.5px; }
+  .log div { padding: 6px 0; border-bottom: 1px solid #00000040; color: var(--dim); }
+  .log div b { color: var(--gold); font-weight: normal; }
+  .log .good { color: var(--good); }
+  .log .bad { color: var(--bad); }
+
+  .pos { color: var(--good); } .neg { color: var(--bad); }
+  .center { text-align: center; }
+  .bigicon { font-size: 44px; text-align: center; margin: 6px 0; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="hrow">
+      <h1>⚜ ISLAND CROWNS</h1>
+      <span class="year" id="hYear"></span>
+    </div>
+    <div class="resbar" id="resbar"></div>
+    <div class="statbar" id="statbar"></div>
+  </header>
+
+  <main id="main"></main>
+
+  <footer>
+    <div class="actiondots" id="dots"></div>
+    <nav id="nav"></nav>
+  </footer>
+</div>
+
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   ISLAND CROWNS — a text-based kingdom strategy simulator
+   One year per turn. Each year opens with a random event, then the
+   ruler may take one action in each sphere: Diplomacy, Economy,
+   Trade, Military.
+===================================================================== */
+
+const RES = {
+  gold:  { ic: '🪙', name: 'Gold' },
+  food:  { ic: '🌾', name: 'Food' },
+  wood:  { ic: '🪵', name: 'Wood' },
+  stone: { ic: '🪨', name: 'Stone' },
+  iron:  { ic: '⛏️', name: 'Iron' },
+};
+
+const BUILDINGS = {
+  farm:     { name: 'Farm',        ic: '🌾', cost: { wood: 20, gold: 15 },            desc: '+6 food each year' },
+  lumber:   { name: 'Lumber Camp', ic: '🪵', cost: { gold: 25 },                      desc: '+5 wood each year' },
+  quarry:   { name: 'Quarry',      ic: '🪨', cost: { wood: 20, gold: 20 },            desc: '+4 stone each year' },
+  mine:     { name: 'Iron Mine',   ic: '⛏️', cost: { wood: 25, stone: 15, gold: 30 }, desc: '+3 iron each year' },
+  market:   { name: 'Market',      ic: '🏪', cost: { wood: 30, stone: 15, gold: 40 }, desc: '+10 gold/yr · better market rates (3:1)', max: 1 },
+  granary:  { name: 'Granary',     ic: '🏚️', cost: { wood: 25, stone: 10 },           desc: 'Halves losses from drought & famine', max: 1 },
+  barracks: { name: 'Barracks',    ic: '🛡️', cost: { wood: 30, stone: 20, iron: 10 }, desc: 'Cheaper recruits · drill troops to elite', max: 1 },
+  walls:    { name: 'City Walls',  ic: '🏰', cost: { stone: 40, wood: 15 },           desc: '+15 defense per ring', max: 3 },
+  temple:   { name: 'Temple',      ic: '⛪', cost: { stone: 30, gold: 35 },           desc: '+1 prestige/yr · +happiness', max: 1 },
+};
+
+const NATION_DEFS = [
+  { id: 'drakmoor',  name: 'Drakmoor',  ic: '🐉', personality: 'warlike',
+    surplus: 'iron', need: 'food', strength: 60, rel: 40,
+    blurb: 'Iron-fisted warlords of the northern crags. Respect strength, smell weakness.' },
+  { id: 'meriva',    name: 'Meriva',    ic: '⛵', personality: 'mercantile',
+    surplus: 'food', need: 'iron', strength: 30, rel: 55,
+    blurb: 'Coastal merchant republic. Friendly to anyone with coin and cargo.' },
+  { id: 'thornwall', name: 'Thornwall', ic: '🌲', personality: 'proud',
+    surplus: 'stone', need: 'wood', strength: 45, rel: 50,
+    blurb: 'Ancient mountain realm. Slow to anger, slower to forgive.' },
+];
+
+const AGGRESSION = { warlike: 0.5, mercantile: 0.12, proud: 0.25 };
+const FIRST_NAMES = ['Aldric','Brenna','Cedric','Daria','Edwin','Fiora','Garrick','Helena','Ivo','Junia','Kael','Lysa','Marek','Nessa','Osric','Petra','Rowan','Sable','Theron','Una'];
+
+let S = null;          // game state
+let ui = { tab: 'kingdom', tradePartner: 'meriva', giveRes: 'wood', getRes: 'food', giveQty: 4, getQty: 4 };
+
+/* ---------------- State ---------------- */
+function newGame() {
+  S = {
+    year: 1,
+    res: { gold: 100, food: 45, wood: 40, stone: 20, iron: 5 },
+    pop: 10,            // in hundreds of souls
+    happiness: 70,
+    prestige: 10,
+    troops: 20,
+    training: 1.0,
+    buildings: { farm: 2, lumber: 1, quarry: 0, mine: 0, market: 0, granary: 0, barracks: 0, walls: 0, temple: 0 },
+    ruler: { name: 'Aldric', age: 32, spouse: true },
+    heirs: [ { name: 'Rowan', age: 8, married: false } ],
+    nations: {},
+    actions: { diplomacy: false, economy: false, trade: false, military: false },
+    spied: {},          // nationId -> true once strength is known
+    log: [],
+    over: false,
+    eventDone: false,
+  };
+  for (const n of NATION_DEFS) {
+    S.nations[n.id] = { strength: n.strength, rel: n.rel, treaty: 0, allied: false };
+  }
+  log(`Year 1 of the reign of ${rulerTitle()} ${S.ruler.name}. Four crowns share one island — only one will be remembered.`);
+  startYearEvent();
+  save();
+}
+
+function rulerTitle() { return '👑'; }
+function nation(id) { return S.nations[id]; }
+function ndef(id) { return NATION_DEFS.find(n => n.id === id); }
+function defense() {
+  return Math.round(S.troops * S.training + S.buildings.walls * 15 + (S.buildings.barracks ? 5 : 0));
+}
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function rnd(n) { return Math.floor(Math.random() * n); }
+function pick(a) { return a[rnd(a.length)]; }
+function log(msg, cls) { S.log.unshift({ y: S.year, msg, cls: cls || '' }); if (S.log.length > 80) S.log.pop(); }
+function canAfford(cost) { return Object.entries(cost).every(([r, v]) => S.res[r] >= v); }
+function payCost(cost) { for (const [r, v] of Object.entries(cost)) S.res[r] -= v; }
+function costStr(cost) { return Object.entries(cost).map(([r, v]) => `${v} ${RES[r].ic}`).join('  '); }
+function relColor(v) { return v >= 65 ? 'var(--good)' : v >= 40 ? 'var(--gold)' : 'var(--bad)'; }
+function relWord(v) { return v >= 80 ? 'Devoted' : v >= 65 ? 'Friendly' : v >= 50 ? 'Cordial' : v >= 35 ? 'Wary' : v >= 20 ? 'Hostile' : 'Seething'; }
+function changeRel(id, d) { nation(id).rel = clamp(nation(id).rel + d, 0, 100); }
+
+function save() { try { localStorage.setItem('islandCrowns', JSON.stringify(S)); } catch (e) {} }
+function load() {
+  try {
+    const d = localStorage.getItem('islandCrowns');
+    if (d) { S = JSON.parse(d); return !S.over; }
+  } catch (e) {}
+  return false;
+}
+
+/* ---------------- Random events ---------------- */
+const EVENTS = [
+  {
+    title: 'Drought', ic: '☀️',
+    text: () => 'A merciless sun scorches the fields. The wells run low and the harvest withers on the stalk.',
+    choices: () => [
+      { label: 'Dig irrigation channels', sub: '40 🪙', ok: () => S.res.gold >= 40,
+        fx: () => { S.res.gold -= 40; return 'The channels save the crop. The farmers bless your name. (+3 happiness)'; },
+        post: () => { S.happiness = clamp(S.happiness + 3, 0, 100); } },
+      { label: 'Endure it', sub: 'Lose a share of stored food',
+        fx: () => { const loss = Math.round(S.res.food * (S.buildings.granary ? 0.15 : 0.3)); S.res.food -= loss;
+          return `The kingdom tightens its belt. Lost ${loss} 🌾${S.buildings.granary ? ' (granary softened the blow)' : ''}. (−5 happiness)`; },
+        post: () => { S.happiness = clamp(S.happiness - 5, 0, 100); } },
+    ],
+  },
+  {
+    title: 'Bumper Harvest', ic: '🌻',
+    text: () => 'The rains came sweet and the fields answer with gold. Wagons groan under the weight of grain.',
+    choices: () => [
+      { label: 'Fill the stores', fx: () => { S.res.food += 25; return 'Granaries overflow. +25 🌾'; } },
+      { label: 'Sell the surplus abroad', fx: () => { S.res.gold += 35; return 'Merchant cogs carry your grain to distant ports. +35 🪙'; } },
+    ],
+  },
+  {
+    title: 'Plague Ship', ic: '🦠',
+    text: () => 'A trade vessel limps into harbor flying a black rag. Sickness festers below its deck.',
+    choices: () => [
+      { label: 'Quarantine the harbor', sub: '50 🪙', ok: () => S.res.gold >= 50,
+        fx: () => { S.res.gold -= 50; return 'The ship burns at anchor. The city is spared, though the merchants grumble.'; } },
+      { label: 'Let them dock', fx: () => {
+          if (Math.random() < 0.55) { S.pop = Math.max(3, S.pop - 2); S.happiness = clamp(S.happiness - 10, 0, 100);
+            return 'Plague sweeps the lower quarters. Hundreds perish. (−2 population, −10 happiness)'; }
+          S.res.gold += 15;
+          return 'Mercifully, the sickness does not spread. The sailors spend freely in your taverns. +15 🪙'; } },
+    ],
+  },
+  {
+    title: 'Bandit Companies', ic: '🗡️',
+    text: () => 'Brigands haunt the inland roads, bleeding your caravans dry and mocking your banners.',
+    choices: () => [
+      { label: 'Buy them off', sub: '30 🪙', ok: () => S.res.gold >= 30,
+        fx: () => { S.res.gold -= 30; return 'The bandits take your silver and melt into the hills. For now.'; } },
+      { label: 'Send the troops', sub: 'Risk depends on your army',
+        fx: () => { if (S.troops * S.training >= 18) { S.prestige += 3; return 'Your soldiers nail bandit chiefs to the crossroads. Order returns. (+3 prestige)'; }
+          S.troops = Math.max(5, S.troops - 5); return 'Your thin ranks are ambushed in the pines. (−5 troops)'; } },
+    ],
+  },
+  {
+    title: 'Royal Scandal', ic: '🎭',
+    text: () => 'A courtier spreads poisonous verses about the royal household. The taverns roar with laughter.',
+    choices: () => [
+      { label: 'Pay the gossips to sing another tune', sub: '25 🪙', ok: () => S.res.gold >= 25,
+        fx: () => { S.res.gold -= 25; return 'New verses praise your wisdom. Coin buys many tongues.'; } },
+      { label: 'Rise above it', fx: () => { S.prestige = Math.max(0, S.prestige - 4); return 'The mockery stings your name across the island. (−4 prestige)'; } },
+    ],
+  },
+  {
+    title: 'Refugees at the Gate', ic: '🏕️',
+    text: () => 'War in a distant land drives a ragged column of families to your walls, begging shelter.',
+    choices: () => [
+      { label: 'Open the gates', sub: '−15 🌾', ok: () => S.res.food >= 15,
+        fx: () => { S.res.food -= 15; S.pop += 2; S.prestige += 3; return 'They settle and swear loyalty. (+2 population, +3 prestige, −15 🌾)'; } },
+      { label: 'Turn them away', fx: () => { S.prestige = Math.max(0, S.prestige - 3); return 'The column shuffles on. Bards will remember your shut gates. (−3 prestige)'; } },
+    ],
+  },
+  {
+    title: 'Earthquake', ic: '🌋',
+    text: () => 'The island shudders in the night. Chimneys topple and the old bridge cracks.',
+    choices: () => [
+      { label: 'Fund swift repairs', sub: '20 🪵 15 🪨', ok: () => S.res.wood >= 20 && S.res.stone >= 15,
+        fx: () => { S.res.wood -= 20; S.res.stone -= 15; S.happiness = clamp(S.happiness + 4, 0, 100); return 'Crews rebuild within the month. The people cheer your steady hand. (+4 happiness)'; } },
+      { label: 'Let each household fend for itself',
+        fx: () => { S.happiness = clamp(S.happiness - 8, 0, 100);
+          const built = Object.keys(S.buildings).filter(b => S.buildings[b] > 0 && b !== 'walls');
+          if (built.length && Math.random() < 0.5) { const b = pick(built); S.buildings[b]--; return `A ${BUILDINGS[b].name} collapses in the aftershocks. (−8 happiness)`; }
+          return 'The city patches itself together, resentfully. (−8 happiness)'; } },
+    ],
+  },
+  {
+    title: 'Wandering Swordmaster', ic: '⚔️',
+    text: () => 'A scarred veteran of foreign wars offers to drill your soldiers — for a price.',
+    choices: () => [
+      { label: 'Hire her', sub: '30 🪙', ok: () => S.res.gold >= 30,
+        fx: () => { S.res.gold -= 30; S.training = Math.min(2.5, +(S.training + 0.2).toFixed(1)); return 'Your soldiers curse her drills and emerge twice the fighters. (+0.2 training)'; } },
+      { label: 'Send her on', fx: () => 'She shrugs and boards the next ship. Perhaps to your rivals.' },
+    ],
+  },
+  {
+    title: 'Iron Vein Discovered', ic: '💎',
+    text: () => 'Shepherd boys tumble into a cave glittering with raw ore in the eastern hills.',
+    choices: () => [
+      { label: 'Claim it for the crown', fx: () => { const g = S.buildings.mine ? 20 : 10; S.res.iron += g; return `Crews haul out ${g} ⛏️ of iron${S.buildings.mine ? ' (your miners work it expertly)' : ''}.`; } },
+      { label: 'Sell the claim to Drakmoor', fx: () => { S.res.gold += 30; changeRel('drakmoor', 8); return 'Drakmoor pays handsomely for good iron. +30 🪙, +8 relations with Drakmoor.'; } },
+    ],
+  },
+  {
+    title: 'Storm at Sea', ic: '🌊',
+    text: () => 'A black squall scatters the trade fleet. Wreckage washes ashore for a week.',
+    choices: () => [
+      { label: 'Compensate the merchant houses', sub: '25 🪙', ok: () => S.res.gold >= 25,
+        fx: () => { S.res.gold -= 25; S.happiness = clamp(S.happiness + 3, 0, 100); return 'The houses stay loyal to your harbor. (+3 happiness)'; } },
+      { label: 'The sea owes no one', fx: () => { S.res.gold -= Math.min(S.res.gold, 15); S.happiness = clamp(S.happiness - 4, 0, 100); return 'Trade slumps while the fleet rebuilds. (−15 🪙, −4 happiness)'; } },
+    ],
+  },
+  {
+    title: 'Grand Tournament', ic: '🏇',
+    text: () => 'Heralds announce a tournament of the four crowns. Every nation will send its champions.',
+    choices: () => [
+      { label: 'Host it in your city', sub: '35 🪙', ok: () => S.res.gold >= 35,
+        fx: () => { S.res.gold -= 35; S.prestige += 6; for (const n of NATION_DEFS) changeRel(n.id, 3); S.happiness = clamp(S.happiness + 5, 0, 100);
+          return 'A week of pageantry! Your banners fly over every tale told this year. (+6 prestige, +3 all relations, +5 happiness)'; } },
+      { label: 'Merely attend', fx: () => { S.prestige += 1; return 'Your champion places honorably. (+1 prestige)'; } },
+    ],
+  },
+  {
+    title: 'Border Dispute', ic: '🗺️',
+    cond: () => true,
+    text: function () { this._n = pick(NATION_DEFS).id; return `Surveyors from ${ndef(this._n).name} ${ndef(this._n).ic} plant boundary stones a league inside your land.`; },
+    choices: function () { const id = this._n; return [
+      { label: 'Concede the strip of land', fx: () => { changeRel(id, 6); S.prestige = Math.max(0, S.prestige - 4); return `${ndef(id).name} is pleased; your nobles are not. (+6 relations, −4 prestige)`; } },
+      { label: 'Tear the stones out', fx: () => { changeRel(id, -10); S.prestige += 4; return `Your riders cast the stones into a ravine. ${ndef(id).name} fumes. (−10 relations, +4 prestige)`; } },
+    ]; },
+  },
+  {
+    title: 'Heir Falls Ill', ic: '🕯️',
+    cond: () => S.heirs.length > 0,
+    text: () => `Young ${S.heirs[0].name} burns with fever. The court physicians whisper and disagree.`,
+    choices: () => [
+      { label: 'Summon the famous healer of Meriva', sub: '40 🪙', ok: () => S.res.gold >= 40,
+        fx: () => { S.res.gold -= 40; changeRel('meriva', 4); return `The healer's bitter draughts work. ${S.heirs[0].name} recovers fully. (+4 relations with Meriva)`; } },
+      { label: 'Trust the court physicians', fx: () => {
+          if (Math.random() < 0.3) { const h = S.heirs.shift(); S.happiness = clamp(S.happiness - 8, 0, 100); return `The bells toll. ${h.name} is laid in the royal crypt. (−8 happiness)`; }
+          return `${S.heirs[0].name} sweats out the fever and recovers.`; } },
+    ],
+  },
+  {
+    title: 'Spy Unmasked', ic: '🪤',
+    text: function () { this._n = pick(NATION_DEFS).id; return `Your guards drag a servant before the throne — an agent of ${ndef(this._n).name} ${ndef(this._n).ic}, caught copying harbor ledgers.`; },
+    choices: function () { const id = this._n; return [
+      { label: 'Execute the spy publicly', fx: () => { changeRel(id, -12); S.prestige += 2; return `A grim spectacle. ${ndef(id).name} denies everything, coldly. (−12 relations, +2 prestige)`; } },
+      { label: 'Return them with a polite warning', fx: () => { changeRel(id, 8); return `${ndef(id).name} appreciates the discretion. A debt is noted. (+8 relations)`; } },
+    ]; },
+  },
+  {
+    title: 'Prophet in the Square', ic: '🔮',
+    text: () => 'A wild-eyed prophet draws crowds in the market square, foretelling doom for crowned heads.',
+    choices: () => [
+      { label: 'Imprison the rabble-rouser', fx: () => { S.happiness = clamp(S.happiness - 6, 0, 100); return 'The square falls quiet, but resentment simmers. (−6 happiness)'; } },
+      { label: 'Invite them to court and listen', fx: () => { S.happiness = clamp(S.happiness + 5, 0, 100); S.prestige += 2; return 'Disarmed by your patience, the prophet blesses your reign instead. (+5 happiness, +2 prestige)'; } },
+    ],
+  },
+  {
+    title: 'Smugglers\' Cove', ic: '🏴‍☠️',
+    text: () => 'Excisemen uncover a smuggling ring moving untaxed goods through a hidden cove.',
+    choices: () => [
+      { label: 'Seize everything', fx: () => { S.res.gold += 25; S.happiness = clamp(S.happiness - 3, 0, 100); return 'Confiscated cargo fills the treasury. The dockfolk mutter. (+25 🪙, −3 happiness)'; } },
+      { label: 'Tax them quietly and look away', fx: () => { S.res.gold += 10; return 'The smugglers pay a discreet tithe. Everyone profits, no one speaks of it. (+10 🪙)'; } },
+    ],
+  },
+  {
+    title: 'A Quiet Year', ic: '🕊️',
+    text: () => 'No fires, no fevers, no foreign banners on the horizon. The island simply breathes.',
+    choices: () => [
+      { label: 'Walk among the people', fx: () => { S.happiness = clamp(S.happiness + 6, 0, 100); return 'You share bread in the market and hear honest grievances. (+6 happiness)'; } },
+      { label: 'Review the kingdom\'s ledgers', fx: () => { S.res.gold += 12; return 'You find waste and trim it. (+12 🪙)'; } },
+    ],
+  },
+];
+
+let currentEvent = null;
+function startYearEvent() {
+  const pool = EVENTS.filter(e => !e.cond || e.cond());
+  currentEvent = pick(pool);
+  S.eventDone = false;
+}
+
+function showEventModal() {
+  const e = currentEvent;
+  const text = typeof e.text === 'function' ? e.text() : e.text;
+  const choices = typeof e.choices === 'function' ? e.choices() : e.choices;
+  let html = `<span class="eventtag">Year ${S.year} — Event</span>
+    <div class="bigicon">${e.ic}</div>
+    <h3 class="center">${e.title}</h3><p>${text}</p>`;
+  choices.forEach((c, i) => {
+    const enabled = !c.ok || c.ok();
+    html += `<button ${enabled ? '' : 'disabled'} onclick="resolveEvent(${i})">
+      <span class="bt">${c.label}</span>${c.sub ? `<span class="bs">${typeof c.sub === 'function' ? c.sub() : c.sub}</span>` : ''}</button>`;
+  });
+  openModal(html);
+}
+
+function resolveEvent(i) {
+  const e = currentEvent;
+  const choices = typeof e.choices === 'function' ? e.choices() : e.choices;
+  const c = choices[i];
+  const result = c.fx();
+  if (c.post) c.post();
+  S.eventDone = true;
+  log(`<b>${e.title}:</b> ${result}`);
+  closeModal();
+  renderAll();
+  save();
+  toastModal(e.ic, e.title, result);
+}
+
+function toastModal(ic, title, text, extraBtn) {
+  openModal(`<div class="bigicon">${ic}</div><h3 class="center">${title}</h3>
+    <p class="center">${text}</p>
+    ${extraBtn || ''}<button class="primary" onclick="closeModal()">Continue</button>`);
+}
+
+/* ---------------- Sphere actions ---------------- */
+function useAction(sphere) { S.actions[sphere] = true; }
+function actionUsed(sphere) { return S.actions[sphere]; }
+
+/* ----- Diplomacy ----- */
+function doGift(id, amount) {
+  if (S.res.gold < amount) return;
+  S.res.gold -= amount;
+  const mult = ndef(id).personality === 'mercantile' ? 1.3 : ndef(id).personality === 'proud' ? 0.8 : 1;
+  const gain = Math.round((amount === 25 ? 6 : amount === 50 ? 12 : 22) * mult);
+  changeRel(id, gain);
+  useAction('diplomacy');
+  log(`<b>Diplomacy:</b> Sent ${amount} 🪙 in gifts to ${ndef(id).name}. (+${gain} relations)`);
+  closeModal(); renderAll(); save();
+}
+
+function doSpy(id) {
+  if (S.res.gold < 20) return;
+  S.res.gold -= 20;
+  useAction('diplomacy');
+  const roll = Math.random();
+  let msg;
+  if (roll < 0.6) {
+    S.spied[id] = true;
+    msg = `Your agent returns with ledgers and muster rolls. ${ndef(id).name} fields a strength of <b>${nation(id).strength}</b>. Their army's strength is now always visible to you.`;
+    log(`<b>Espionage:</b> Agents infiltrated ${ndef(id).name} — their strength is ${nation(id).strength}.`);
+  } else if (roll < 0.85) {
+    S.spied[id] = true;
+    nation(id).strength = Math.max(10, nation(id).strength - 6);
+    msg = `Your agent sabotages an armory and slips away. ${ndef(id).name}'s strength drops by 6 (now ${nation(id).strength}), and their muster rolls are yours.`;
+    log(`<b>Espionage:</b> Sabotage in ${ndef(id).name}! Their strength fell to ${nation(id).strength}.`, 'good');
+  } else {
+    changeRel(id, -15);
+    msg = `Disaster — your agent is caught and paraded through ${ndef(id).name}'s streets. (−15 relations)`;
+    log(`<b>Espionage:</b> Agent caught in ${ndef(id).name}. (−15 relations)`, 'bad');
+  }
+  closeModal(); renderAll(); save();
+  toastModal('🕵️', 'Espionage', msg);
+}
+
+function doPact(id) {
+  if (nation(id).rel < 65 || S.res.gold < 20) return;
+  S.res.gold -= 20;
+  nation(id).treaty = 10;
+  S.prestige += 5;
+  useAction('diplomacy');
+  log(`<b>Diplomacy:</b> Signed a 10-year non-aggression pact with ${ndef(id).name}. (+5 prestige)`, 'good');
+  closeModal(); renderAll(); save();
+  toastModal('📜', 'Pact Signed', `Envoys exchange sealed parchments. ${ndef(id).name} will not raise arms against you for 10 years.`);
+}
+
+function doMarriage(id) {
+  const heir = S.heirs.find(h => h.age >= 16 && !h.married);
+  if (!heir || nation(id).rel < 55 || S.res.gold < 50) return;
+  S.res.gold -= 50;
+  heir.married = true;
+  nation(id).allied = true;
+  nation(id).treaty = 99;
+  changeRel(id, 30);
+  S.prestige += 10;
+  useAction('diplomacy');
+  log(`<b>Royal Wedding:</b> ${heir.name} weds into the ruling house of ${ndef(id).name}! Permanent alliance forged. (+10 prestige)`, 'good');
+  closeModal(); renderAll(); save();
+  toastModal('💍', 'Royal Wedding', `Bells ring across two nations. ${heir.name}'s marriage binds ${ndef(id).name} to your dynasty forever — they will never attack you, and their relation rises greatly.`);
+}
+
+/* ----- Economy ----- */
+function doBuild(key) {
+  const b = BUILDINGS[key];
+  if (!canAfford(b.cost)) return;
+  if (b.max && S.buildings[key] >= b.max) return;
+  payCost(b.cost);
+  S.buildings[key]++;
+  S.prestige += 1;
+  useAction('economy');
+  log(`<b>Construction:</b> Built ${b.ic} ${b.name}. ${b.desc}.`);
+  closeModal(); renderAll(); save();
+}
+
+function doTax() {
+  const gain = Math.round(S.pop * 3);
+  S.res.gold += gain;
+  S.happiness = clamp(S.happiness - 8, 0, 100);
+  useAction('economy');
+  log(`<b>Taxation:</b> Special levy raised ${gain} 🪙. The people grumble. (−8 happiness)`);
+  renderAll(); save();
+}
+
+function doFestival() {
+  if (S.res.gold < 30 || S.res.food < 10) return;
+  S.res.gold -= 30; S.res.food -= 10;
+  S.happiness = clamp(S.happiness + 12, 0, 100);
+  S.prestige += 2;
+  useAction('economy');
+  log(`<b>Festival:</b> Wine, music and roasted boar for all! (+12 happiness, +2 prestige)`);
+  renderAll(); save();
+}
+
+/* ----- Trade ----- */
+function tradeValue(id, res) {
+  const d = ndef(id);
+  if (res === d.need) return 1.6;
+  if (res === d.surplus) return 0.5;
+  if (res === 'gold') return 1.0;
+  return 1.0;
+}
+
+function proposeTrade() {
+  const give = ui.giveRes, get = ui.getRes, gq = ui.giveQty, rq = ui.getQty;
+  if (give === get) { toastModal('🤝', 'Trade', 'Choose two different resources.'); return; }
+  if (S.res[give] < gq) { toastModal('🤝', 'Trade', `You don't have ${gq} ${RES[give].ic} to offer.`); return; }
+
+  if (ui.tradePartner === 'market') {
+    const rate = S.buildings.market ? 3 : 4;
+    const got = Math.floor(gq / rate);
+    if (got < 1) { toastModal('🏪', 'Open Market', `The market trades at ${rate}:1 — offer at least ${rate} ${RES[give].ic}.`); return; }
+    S.res[give] -= got * rate;
+    S.res[get] += got;
+    useAction('trade');
+    log(`<b>Market:</b> Traded ${got * rate} ${RES[give].ic} for ${got} ${RES[get].ic} at the docks (${rate}:1).`);
+    renderAll(); save();
+    toastModal('🏪', 'Market Trade', `Exchanged ${got * rate} ${RES[give].ic} → ${got} ${RES[get].ic}.`);
+    return;
+  }
+
+  const id = ui.tradePartner, d = ndef(id);
+  const offerVal = gq * tradeValue(id, give);
+  const askVal = rq * tradeValue(id, get);
+  const priceFactor = 1.3 - nation(id).rel / 200;   // 1.3 hostile → 0.8 devoted
+  if (offerVal >= askVal * priceFactor) {
+    S.res[give] -= gq;
+    S.res[get] += rq;
+    changeRel(id, 2);
+    useAction('trade');
+    log(`<b>Trade:</b> ${d.name} accepted ${gq} ${RES[give].ic} for ${rq} ${RES[get].ic}. (+2 relations)`, 'good');
+    renderAll(); save();
+    toastModal(d.ic, `${d.name} Accepts!`, `Caravans cross the border: your ${gq} ${RES[give].ic} for their ${rq} ${RES[get].ic}. Trade warms relations. (+2)`);
+  } else {
+    const needed = Math.ceil(askVal * priceFactor / tradeValue(id, give));
+    toastModal(d.ic, `${d.name} Refuses`, `"An insulting offer." They would want about <b>${needed} ${RES[give].ic}</b> for ${rq} ${RES[get].ic}. They covet ${RES[d.need].ic} ${RES[d.need].name} and have plenty of ${RES[d.surplus].ic} ${RES[d.surplus].name}. Better relations mean better prices. <span class="muted">(Refusals don't use your trade action.)</span>`);
+  }
+}
+
+/* ----- Military ----- */
+function doRecruit() {
+  const cost = S.buildings.barracks ? { gold: 25, food: 10 } : { gold: 35, food: 10 };
+  if (!canAfford(cost)) return;
+  payCost(cost);
+  S.troops += 10;
+  useAction('military');
+  log(`<b>Muster:</b> Recruited 10 troops. Army: ${S.troops}.`);
+  renderAll(); save();
+}
+
+function doTrain() {
+  const max = S.buildings.barracks ? 2.5 : 1.5;
+  if (S.res.gold < 20 || S.training >= max) return;
+  S.res.gold -= 20;
+  S.training = Math.min(max, +(S.training + 0.2).toFixed(1));
+  useAction('military');
+  log(`<b>Drills:</b> Training improved to ×${S.training.toFixed(1)}.`);
+  renderAll(); save();
+}
+
+function doFortify() {
+  const b = BUILDINGS.walls;
+  if (!canAfford(b.cost) || S.buildings.walls >= b.max) return;
+  payCost(b.cost);
+  S.buildings.walls++;
+  useAction('military');
+  log(`<b>Fortification:</b> Raised wall ring ${S.buildings.walls}. Defense +15.`);
+  renderAll(); save();
+}
+
+function doShowForce(id) {
+  useAction('military');
+  const mine = S.troops * S.training;
+  if (mine >= nation(id).strength) {
+    changeRel(id, -4); S.prestige += 3;
+    log(`<b>Show of Force:</b> War games on ${ndef(id).name}'s border. They take careful note. (+3 prestige, −4 relations)`);
+    toastModal('🎺', 'Show of Force', `Your columns wheel and drill within sight of ${ndef(id).name}'s watchtowers. Their envoys count your spears twice. Deterrence achieved. (+3 prestige, −4 relations)`);
+  } else {
+    changeRel(id, -4); S.prestige = Math.max(0, S.prestige - 2);
+    log(`<b>Show of Force:</b> ${ndef(id).name} is unimpressed by your modest host. (−2 prestige, −4 relations)`);
+    toastModal('🎺', 'Show of Force', `Your parade looks thin against ${ndef(id).name}'s reputation. Their court jesters get new material. (−2 prestige, −4 relations)`);
+  }
+  closeModal(); renderAll(); save();
+}
+
+function doRaid(id) {
+  useAction('military');
+  const d = ndef(id);
+  const mine = S.troops * S.training * (0.8 + Math.random() * 0.5);
+  const theirs = nation(id).strength * (0.8 + Math.random() * 0.5);
+  changeRel(id, -30);
+  for (const n of NATION_DEFS) if (n.id !== id) changeRel(n.id, -5);
+  nation(id).treaty = 0;
+  let msg;
+  if (mine > theirs) {
+    const loot = 30 + rnd(25);
+    S.res.gold += loot;
+    S.res[d.surplus] += 12;
+    nation(id).strength = Math.max(10, nation(id).strength - 12);
+    S.troops = Math.max(5, S.troops - Math.round(S.troops * 0.1));
+    S.prestige += 8;
+    msg = `Victory! Your host storms ${d.name}'s border forts. Loot: ${loot} 🪙 and 12 ${RES[d.surplus].ic}. Their strength is broken down to ${nation(id).strength}. (+8 prestige, −10% troops, all nations −relations)`;
+    log(`<b>War:</b> Raid on ${d.name} succeeds! +${loot} 🪙, +12 ${RES[d.surplus].ic}.`, 'good');
+  } else {
+    S.troops = Math.max(5, S.troops - Math.round(S.troops * 0.3));
+    S.prestige = Math.max(0, S.prestige - 5);
+    msg = `Disaster. ${d.name}'s line holds and your host breaks on their shields. (−30% troops, −5 prestige, all nations −relations)`;
+    log(`<b>War:</b> Raid on ${d.name} repelled. Heavy losses.`, 'bad');
+  }
+  closeModal(); renderAll(); save();
+  toastModal('⚔️', `War with ${d.name}`, msg);
+}
+
+/* ---------------- End of year ---------------- */
+function endYear() {
+  const unused = Object.entries(S.actions).filter(([k, v]) => !v).map(([k]) => k);
+  if (!S.eventDone) { showEventModal(); return; }
+  if (unused.length) {
+    openModal(`<h3>End Year ${S.year}?</h3>
+      <p>You still have unused actions: <b>${unused.join(', ')}</b>. The seasons wait for no crown.</p>
+      <button class="primary" onclick="closeModal();processYear()">End the year anyway</button>
+      <button onclick="closeModal()">Keep ruling</button>`);
+    return;
+  }
+  processYear();
+}
+
+function processYear() {
+  const report = [];
+
+  // --- Production ---
+  const happyMod = S.happiness < 30 ? 0.8 : 1;
+  const prod = {
+    food: Math.round(S.buildings.farm * 6 * happyMod),
+    wood: Math.round(S.buildings.lumber * 5 * happyMod),
+    stone: Math.round(S.buildings.quarry * 4 * happyMod),
+    iron: Math.round(S.buildings.mine * 3 * happyMod),
+    gold: Math.round((S.pop * 2 + S.buildings.market * 10) * happyMod),
+  };
+  for (const r in prod) S.res[r] += prod[r];
+
+  // --- Consumption & upkeep ---
+  const eat = S.pop;
+  const upkeep = Math.round(S.troops * 0.4);
+  S.res.food -= eat;
+  S.res.gold -= upkeep;
+  report.push(`Harvest +${prod.food} 🌾, taxes +${prod.gold} 🪙; the city ate ${eat} 🌾, the army cost ${upkeep} 🪙.`);
+  if (prod.wood + prod.stone + prod.iron > 0) report.push(`Industry yielded +${prod.wood} 🪵 +${prod.stone} 🪨 +${prod.iron} ⛏️.`);
+  if (happyMod < 1) report.push('Unrest slowed all production by 20%.');
+
+  // --- Famine / bankruptcy ---
+  if (S.res.food < 0) {
+    const shortage = -S.res.food;
+    S.res.food = 0;
+    const deaths = S.buildings.granary ? Math.ceil(shortage / 20) : Math.ceil(shortage / 10);
+    S.pop = Math.max(2, S.pop - deaths);
+    S.happiness = clamp(S.happiness - 15, 0, 100);
+    report.push(`<span class="neg">FAMINE — the stores ran dry. −${deaths} population, −15 happiness.</span>`);
+    log('<b>Famine</b> grips the city. The hungry curse the crown.', 'bad');
+  }
+  if (S.res.gold < 0) {
+    S.res.gold = 0;
+    const deserters = Math.round(S.troops * 0.2);
+    S.troops = Math.max(0, S.troops - deserters);
+    report.push(`<span class="neg">The treasury is empty — ${deserters} unpaid troops desert.</span>`);
+  }
+
+  // --- Population & happiness drift ---
+  if (S.happiness >= 70 && S.res.food > S.pop) { S.pop++; report.push('Prosperity draws settlers: +1 population.'); }
+  if (S.happiness < 25 && Math.random() < 0.4) {
+    S.pop = Math.max(2, S.pop - 1);
+    report.push('<span class="neg">Families emigrate to kinder shores: −1 population.</span>');
+  }
+  S.happiness = clamp(S.happiness + (S.happiness < 50 ? 2 : -1) + (S.buildings.temple ? 2 : 0), 0, 100);
+
+  // --- Prestige ---
+  if (S.buildings.temple) S.prestige++;
+  S.prestige = Math.max(0, S.prestige);
+
+  // --- Dynasty ---
+  S.ruler.age++;
+  for (const h of S.heirs) h.age++;
+  if (S.ruler.spouse && S.ruler.age < 46 && Math.random() < 0.22) {
+    const name = pick(FIRST_NAMES.filter(n => n !== S.ruler.name && !S.heirs.some(h => h.name === n)));
+    S.heirs.push({ name, age: 0, married: false });
+    report.push(`<span class="pos">A royal birth! ${name} joins the dynasty.</span>`);
+    log(`A child is born to the royal house: <b>${name}</b>.`, 'good');
+  }
+  if (S.ruler.age > 52 && Math.random() < (S.ruler.age - 50) * 0.025) {
+    const dead = S.ruler.name;
+    const heir = S.heirs.find(h => h.age >= 16);
+    if (heir) {
+      S.heirs = S.heirs.filter(h => h !== heir);
+      S.ruler = { name: heir.name, age: heir.age, spouse: heir.married || Math.random() < 0.5 };
+      S.prestige = Math.max(0, S.prestige - 3);
+      report.push(`<span class="neg">${dead} has died.</span> <span class="pos">${heir.name} is crowned without incident.</span>`);
+      log(`<b>${dead}</b> is dead. Long live <b>${heir.name}</b>!`);
+      for (const n of NATION_DEFS) changeRel(n.id, -5);
+    } else if (S.heirs.length > 0) {
+      S.ruler = { name: S.heirs[0].name, age: S.heirs[0].age, spouse: false };
+      const regentFor = S.heirs.shift();
+      S.happiness = clamp(S.happiness - 12, 0, 100);
+      S.prestige = Math.max(0, S.prestige - 8);
+      report.push(`<span class="neg">${dead} has died leaving only the child ${regentFor.name}. A shaky regency rules. (−8 prestige, −12 happiness)</span>`);
+      log(`<b>${dead}</b> is dead. A regency council rules for young ${regentFor.name}.`, 'bad');
+    } else {
+      gameOver(false, `${dead} died without an heir. The dynasty is extinguished, and the island's crowns carve up your leaderless city. The line of Aldoria ends after ${S.year} years.`);
+      return;
+    }
+  }
+
+  // --- Nations: drift, treaties, deterrence & war ---
+  const myDef = defense();
+  for (const d of NATION_DEFS) {
+    const n = nation(d.id);
+    if (n.treaty > 0 && n.treaty < 90) n.treaty--;
+    // personality drift
+    if (d.personality === 'mercantile') n.rel = clamp(n.rel + 1, 0, 100);
+    if (d.personality === 'warlike' && Math.random() < 0.5) n.rel = clamp(n.rel - 1, 0, 100);
+    // armies grow slowly
+    n.strength = Math.min(100, n.strength + (Math.random() < 0.6 ? 2 : 0));
+    // war check — deterrence: they only strike the weak
+    if (!n.allied && n.treaty <= 0 && n.rel < 40 && n.strength > myDef * 1.25) {
+      const chance = AGGRESSION[d.personality] * (1 - n.rel / 100);
+      if (Math.random() < chance) {
+        const atk = n.strength * (0.8 + Math.random() * 0.5);
+        const def = myDef * (0.85 + Math.random() * 0.4);
+        if (def >= atk) {
+          n.strength = Math.max(10, n.strength - 15);
+          S.troops = Math.max(0, S.troops - Math.round(S.troops * 0.15));
+          S.prestige += 6;
+          report.push(`<span class="pos">⚔️ ${d.name} attacked — and broke against your defenses! (+6 prestige, their strength −15)</span>`);
+          log(`<b>War:</b> ${d.name} invaded and was repelled at the walls!`, 'good');
+          changeRel(d.id, -10);
+        } else if (def >= atk * 0.55) {
+          const lootG = Math.min(S.res.gold, 40), lootF = Math.min(S.res.food, 20);
+          S.res.gold -= lootG; S.res.food -= lootF;
+          S.troops = Math.max(0, S.troops - Math.round(S.troops * 0.35));
+          S.pop = Math.max(2, S.pop - 1);
+          S.prestige = Math.max(0, S.prestige - 8);
+          S.happiness = clamp(S.happiness - 10, 0, 100);
+          report.push(`<span class="neg">⚔️ ${d.name} raided your lands! Lost ${lootG} 🪙, ${lootF} 🌾, a third of your troops, 1 population. (−8 prestige)</span>`);
+          log(`<b>War:</b> ${d.name} raided the kingdom and carried off plunder.`, 'bad');
+        } else {
+          gameOver(false, `${d.name}'s host smashed through your meager defenses (defense ${myDef} vs. their strength ${n.strength}). The city burns, and a foreign banner flies over the keep. Your reign ends in year ${S.year}. Remember: war on this island is about deterrence — never let your defense fall so far behind.`);
+          return;
+        }
+      }
+    }
+  }
+
+  // --- Advance ---
+  S.year++;
+  S.actions = { diplomacy: false, economy: false, trade: false, military: false };
+  log(`<b>— Year ${S.year} begins —</b>`);
+
+  // --- Win checks ---
+  if (S.prestige >= 100) { gameOver(true, `Your name eclipses every crown on the island. Bards in all four nations sing of Aldoria's golden age. After ${S.year} years, history crowns you <b>the Great</b>. 🏆 Prestige 100 achieved!`); return; }
+  if (S.year > 50) { gameOver(true, `Fifty years of unbroken rule! Through drought, plague, scheming neighbors and the long patience of statecraft, your dynasty endures. Final prestige: ${S.prestige}. The island remembers Aldoria. 🏆`); return; }
+
+  startYearEvent();
+  save();
+  renderAll();
+  openModal(`<h3>Chronicle of Year ${S.year - 1}</h3>
+    <p class="small">${report.join('<br><br>')}</p>
+    <button class="primary" onclick="closeModal();showEventModal()">Begin Year ${S.year} ➤</button>`);
+}
+
+function gameOver(won, text) {
+  S.over = true;
+  save();
+  openModal(`<div class="bigicon">${won ? '🏆' : '💀'}</div>
+    <h3 class="center">${won ? 'VICTORY' : 'THE CROWN FALLS'}</h3>
+    <p>${text}</p>
+    <p class="muted small center">Reigned ${S.year} years · Prestige ${S.prestige} · Population ${S.pop * 100} · ${S.heirs.length} heirs</p>
+    <button class="primary" onclick="restart()">New Game</button>`, true);
+}
+
+function restart() { localStorage.removeItem('islandCrowns'); closeModal(); newGame(); renderAll(); showEventModal(); }
+
+/* ---------------- Modal helpers ---------------- */
+let modalLocked = false;
+function openModal(html, locked) {
+  modalLocked = !!locked;
+  document.getElementById('modal').innerHTML = html;
+  document.getElementById('overlay').classList.add('show');
+}
+function closeModal() {
+  if (modalLocked) return;
+  document.getElementById('overlay').classList.remove('show');
+}
+document.getElementById('overlay').addEventListener('click', e => { if (e.target.id === 'overlay') closeModal(); });
+
+/* ---------------- Rendering ---------------- */
+function renderHeader() {
+  document.getElementById('hYear').textContent = `Year ${S.year} · ${rulerTitle()} ${S.ruler.name}`;
+  let rb = '';
+  for (const [k, r] of Object.entries(RES)) {
+    rb += `<div class="res"><span class="ic">${r.ic}</span><span class="v">${S.res[k]}</span></div>`;
+  }
+  rb += `<div class="res"><span class="ic">⭐</span><span class="v">${S.prestige}</span></div>`;
+  document.getElementById('resbar').innerHTML = rb;
+  document.getElementById('statbar').innerHTML =
+    `<span>👥 <b>${S.pop * 100}</b></span>
+     <span>😊 <b>${S.happiness}</b></span>
+     <span>⚔️ <b>${S.troops}</b>×${S.training.toFixed(1)}</span>
+     <span>🛡️ Def <b>${defense()}</b></span>`;
+}
+
+function renderDots() {
+  const labels = { diplomacy: '🕊️ Diplomacy', economy: '🏗️ Economy', trade: '🤝 Trade', military: '⚔️ Military' };
+  document.getElementById('dots').innerHTML = Object.entries(S.actions)
+    .map(([k, v]) => `<span class="${v ? 'done' : ''}">${v ? '✓' : '·'} ${labels[k]}</span>`).join('');
+}
+
+function renderNav() {
+  const tabs = [
+    { id: 'kingdom', ic: '👑', label: 'Kingdom' },
+    { id: 'diplomacy', ic: '🕊️', label: 'Diplomacy' },
+    { id: 'economy', ic: '🏗️', label: 'Economy' },
+    { id: 'trade', ic: '🤝', label: 'Trade' },
+    { id: 'military', ic: '⚔️', label: 'Military' },
+  ];
+  let html = tabs.map(t =>
+    `<button class="${ui.tab === t.id ? 'active' : ''}" onclick="setTab('${t.id}')">
+      <span class="nic">${t.ic}</span>${t.label}</button>`).join('');
+  document.getElementById('nav').innerHTML = html;
+}
+
+function setTab(t) { ui.tab = t; renderMain(); renderNav(); }
+
+function sphereBanner(sphere) {
+  if (!S.eventDone) return `<div class="card"><span class="sub">📜 Resolve this year's event first.</span></div>`;
+  if (actionUsed(sphere)) return `<div class="card"><span class="sub">✓ Your ${sphere} action is spent this year.</span></div>`;
+  return '';
+}
+function lockBtns(sphere) { return !S.eventDone || actionUsed(sphere) ? 'disabled' : ''; }
+
+function renderMain() {
+  const m = document.getElementById('main');
+  if (ui.tab === 'kingdom') m.innerHTML = paneKingdom();
+  else if (ui.tab === 'diplomacy') m.innerHTML = paneDiplomacy();
+  else if (ui.tab === 'economy') m.innerHTML = paneEconomy();
+  else if (ui.tab === 'trade') m.innerHTML = paneTrade();
+  else if (ui.tab === 'military') m.innerHTML = paneMilitary();
+  m.scrollTop = 0;
+}
+
+/* ----- Kingdom pane ----- */
+function paneKingdom() {
+  let h = `<h2>The Kingdom of Aldoria</h2>`;
+  if (!S.eventDone) {
+    h += `<button class="primary" onclick="showEventModal()">📜 An event demands your attention!</button>`;
+  } else {
+    h += `<button class="primary" onclick="endYear()">⏳ End Year ${S.year}</button>`;
+  }
+  h += `<div class="card">
+    <div class="title">${rulerTitle()} ${S.ruler.name}, age ${S.ruler.age}</div>
+    <div class="sub">${S.ruler.spouse ? 'Married' : 'Unwed'} · ${S.ruler.age > 52 ? 'Growing old — secure the succession' : 'In good health'}</div>
+  </div>`;
+  h += `<div class="card"><div class="title">Dynasty</div>`;
+  if (S.heirs.length === 0) {
+    h += `<div class="sub neg">No heirs! If the ruler dies, the dynasty — and the game — ends.</div>`;
+  } else {
+    h += S.heirs.map(x =>
+      `<div class="sub">👤 ${x.name}, age ${x.age} ${x.married ? '· 💍 married abroad' : x.age >= 16 ? '· of marriageable age' : ''}</div>`).join('');
+  }
+  h += `</div>`;
+  h += `<div class="card"><div class="title">Happiness ${S.happiness}/100</div>
+    <div class="meter"><div style="width:${S.happiness}%;background:${S.happiness >= 55 ? 'var(--good)' : S.happiness >= 30 ? 'var(--gold)' : 'var(--bad)'}"></div></div>
+    <div class="sub" style="margin-top:6px">Prestige ${S.prestige}/100 — reach 100 (or survive 50 years) to win</div>
+    <div class="meter"><div style="width:${S.prestige}%;background:var(--gold)"></div></div></div>`;
+  h += `<div class="card"><div class="title">Holdings</div><div class="sub">` +
+    Object.entries(S.buildings).filter(([k, v]) => v > 0)
+      .map(([k, v]) => `${BUILDINGS[k].ic} ${BUILDINGS[k].name}${v > 1 ? ' ×' + v : ''}`).join(' · ') + `</div></div>`;
+  h += `<h2>Chronicle</h2><div class="card log">` +
+    S.log.slice(0, 25).map(l => `<div class="${l.cls}">${l.msg}</div>`).join('') + `</div>`;
+  h += `<button class="small" style="text-align:center" onclick="confirmRestart()">⟲ Abandon reign &amp; start anew</button>`;
+  return h;
+}
+function confirmRestart() {
+  openModal(`<h3>Abandon the throne?</h3><p>Your current reign will be erased.</p>
+    <button class="primary" onclick="restart()">Yes, start a new game</button>
+    <button onclick="closeModal()">Keep ruling</button>`);
+}
+
+/* ----- Diplomacy pane ----- */
+function paneDiplomacy() {
+  let h = `<h2>Diplomacy</h2>` + sphereBanner('diplomacy');
+  for (const d of NATION_DEFS) {
+    const n = nation(d.id);
+    h += `<div class="card">
+      <div class="nation"><div class="title">${d.ic} ${d.name}</div>
+        <span class="relval" style="color:${relColor(n.rel)}">${relWord(n.rel)} ${n.rel}</span></div>
+      <div class="meter"><div style="width:${n.rel}%;background:${relColor(n.rel)}"></div></div>
+      <div class="sub" style="margin-top:6px">${d.blurb}</div>
+      <div class="sub">Strength: <b>${S.spied[d.id] ? n.strength : (n.strength > defense() * 1.25 ? 'looms over yours' : 'comparable or less')}</b>
+        ${n.allied ? ' · 💍 Allied by marriage' : n.treaty > 0 ? ` · 📜 Pact (${n.treaty}y)` : ''}</div>
+      <div class="btnrow" style="margin-top:8px">
+        <button class="compact" ${lockBtns('diplomacy')} onclick="giftMenu('${d.id}')">🎁 Gift</button>
+        <button class="compact" ${lockBtns('diplomacy')} ${S.res.gold < 20 ? 'disabled' : ''} onclick="spyConfirm('${d.id}')">🕵️ Spy</button>
+        <button class="compact" ${lockBtns('diplomacy')} ${n.rel < 65 || S.res.gold < 20 || n.treaty > 0 ? 'disabled' : ''} onclick="doPact('${d.id}')">📜 Pact</button>
+      </div>
+      ${marriageBtn(d.id)}
+    </div>`;
+  }
+  h += `<div class="card"><div class="sub">🎁 Gifts buy goodwill (merchants love them, the proud less so). 🕵️ Spies reveal or sabotage armies — or get caught. 📜 Pacts (relations ≥65, 20 🪙) stop war for 10 years. 💍 A royal marriage (adult heir, relations ≥55, 50 🪙) forges a permanent alliance.</div></div>`;
+  return h;
+}
+function marriageBtn(id) {
+  const n = nation(id);
+  if (n.allied) return '';
+  const heir = S.heirs.find(x => x.age >= 16 && !x.married);
+  const ok = heir && n.rel >= 55 && S.res.gold >= 50;
+  let why = !heir ? 'needs an unmarried heir of 16+' : n.rel < 55 ? 'needs relations ≥55' : S.res.gold < 50 ? 'needs 50 🪙 dowry' : '';
+  return `<button ${lockBtns('diplomacy')} ${ok ? '' : 'disabled'} onclick="doMarriage('${id}')">
+    <span class="bt">💍 Arrange royal marriage</span><span class="bs">${ok ? `Wed ${heir.name} into their house — permanent alliance · 50 🪙` : why}</span></button>`;
+}
+function giftMenu(id) {
+  const d = ndef(id);
+  openModal(`<h3>🎁 Gift to ${d.name}</h3><p class="muted small">${d.personality === 'mercantile' ? 'Merchants adore gold — extra effect.' : d.personality === 'proud' ? 'The proud are hard to buy — reduced effect.' : 'Warlords respect tribute.'}</p>
+    <button ${S.res.gold < 25 ? 'disabled' : ''} onclick="doGift('${id}',25)"><span class="bt">Modest gift — 25 🪙</span></button>
+    <button ${S.res.gold < 50 ? 'disabled' : ''} onclick="doGift('${id}',50)"><span class="bt">Generous gift — 50 🪙</span></button>
+    <button ${S.res.gold < 100 ? 'disabled' : ''} onclick="doGift('${id}',100)"><span class="bt">Lavish gift — 100 🪙</span></button>
+    <button onclick="closeModal()">Cancel</button>`);
+}
+function spyConfirm(id) {
+  openModal(`<h3>🕵️ Send a spy to ${ndef(id).name}?</h3>
+    <p class="small">Cost 20 🪙. Likely: learn their true strength. Possibly: sabotage their armory. Risk: your agent is caught (−15 relations).</p>
+    <button class="primary" onclick="doSpy('${id}')">Dispatch the agent</button>
+    <button onclick="closeModal()">Cancel</button>`);
+}
+
+/* ----- Economy pane ----- */
+function paneEconomy() {
+  let h = `<h2>Economy &amp; Construction</h2>` + sphereBanner('economy');
+  h += `<button ${lockBtns('economy')} onclick="buildMenu()"><span class="bt">🏗️ Construct a building</span><span class="bs">Spend resources to expand the kingdom</span></button>`;
+  h += `<button ${lockBtns('economy')} onclick="doTax()"><span class="bt">💰 Raise a special levy</span><span class="bs">+${Math.round(S.pop * 3)} 🪙 now · −8 happiness</span></button>`;
+  h += `<button ${lockBtns('economy')} ${S.res.gold < 30 || S.res.food < 10 ? 'disabled' : ''} onclick="doFestival()"><span class="bt">🎪 Hold a festival</span><span class="bs">30 🪙 + 10 🌾 · +12 happiness, +2 prestige</span></button>`;
+  h += `<h2>Yearly Ledger</h2><div class="card"><div class="sub">
+    🌾 Food: +${S.buildings.farm * 6} from farms, −${S.pop} eaten by ${S.pop * 100} souls<br>
+    🪙 Gold: +${S.pop * 2} taxes${S.buildings.market ? `, +${S.buildings.market * 10} market` : ''}, −${Math.round(S.troops * 0.4)} army upkeep<br>
+    🪵 +${S.buildings.lumber * 5} · 🪨 +${S.buildings.quarry * 4} · ⛏️ +${S.buildings.mine * 3}<br>
+    <span class="muted">Unrest below 30 happiness cuts production 20%. Starvation kills.</span></div></div>`;
+  return h;
+}
+function buildMenu() {
+  let html = `<h3>🏗️ Construct</h3>`;
+  for (const [k, b] of Object.entries(BUILDINGS)) {
+    const maxed = b.max && S.buildings[k] >= b.max;
+    const ok = canAfford(b.cost) && !maxed;
+    html += `<button ${ok ? '' : 'disabled'} onclick="doBuild('${k}')">
+      <span class="bt">${b.ic} ${b.name} ${S.buildings[k] > 0 ? `(have ${S.buildings[k]})` : ''}</span>
+      <span class="bs">${maxed ? 'Fully built' : costStr(b.cost) + ' — ' + b.desc}</span></button>`;
+  }
+  html += `<button onclick="closeModal()">Cancel</button>`;
+  openModal(html);
+}
+
+/* ----- Trade pane ----- */
+function paneTrade() {
+  let h = `<h2>Trade</h2>` + sphereBanner('trade');
+  // partner chips
+  h += `<div class="muted small">Trading partner</div><div class="chiprow">`;
+  for (const d of NATION_DEFS) {
+    h += `<button class="chip ${ui.tradePartner === d.id ? 'sel' : ''}" onclick="setTrade('tradePartner','${d.id}')">${d.ic} ${d.name}</button>`;
+  }
+  h += `<button class="chip ${ui.tradePartner === 'market' ? 'sel' : ''}" onclick="setTrade('tradePartner','market')">🏪 Market ${S.buildings.market ? '3:1' : '4:1'}</button></div>`;
+
+  if (ui.tradePartner !== 'market') {
+    const d = ndef(ui.tradePartner);
+    h += `<div class="card"><div class="sub">${d.ic} <b>${d.name}</b> covets <b>${RES[d.need].ic} ${RES[d.need].name}</b> (pays well for it) and has surplus <b>${RES[d.surplus].ic} ${RES[d.surplus].name}</b> (sells it cheap). Relations ${nation(d.id).rel} — friendlier nations give fairer prices.</div></div>`;
+  } else {
+    h += `<div class="card"><div class="sub">🏪 The open market always trades at ${S.buildings.market ? '3' : '4'}:1${S.buildings.market ? '' : ' — build a Market for 3:1'}. You receive ⌊offer ÷ rate⌋.</div></div>`;
+  }
+
+  h += `<div class="muted small">You give</div><div class="chiprow">` +
+    Object.entries(RES).map(([k, r]) => `<button class="chip ${ui.giveRes === k ? 'sel' : ''}" onclick="setTrade('giveRes','${k}')">${r.ic} ${r.name}</button>`).join('') + `</div>`;
+  h += stepper('giveQty');
+  h += `<div class="muted small">You receive</div><div class="chiprow">` +
+    Object.entries(RES).map(([k, r]) => `<button class="chip ${ui.getRes === k ? 'sel' : ''}" onclick="setTrade('getRes','${k}')">${r.ic} ${r.name}</button>`).join('') + `</div>`;
+  if (ui.tradePartner === 'market') {
+    const rate = S.buildings.market ? 3 : 4;
+    h += `<div class="card"><div class="sub center">You'd receive <b>${Math.floor(ui.giveQty / rate)} ${RES[ui.getRes].ic}</b> for ${ui.giveQty} ${RES[ui.giveRes].ic}</div></div>`;
+  } else {
+    h += stepper('getQty');
+  }
+  h += `<button class="primary" ${lockBtns('trade')} onclick="proposeTrade()">🤝 Propose Trade</button>`;
+  return h;
+}
+function stepper(key) {
+  return `<div class="stepper">
+    <button onclick="bump('${key}',-5)">−5</button>
+    <button onclick="bump('${key}',-1)">−</button>
+    <div class="num">${ui[key]} ${RES[key === 'giveQty' ? ui.giveRes : ui.getRes].ic}</div>
+    <button onclick="bump('${key}',1)">+</button>
+    <button onclick="bump('${key}',5)">+5</button>
+  </div>`;
+}
+function bump(key, d) { ui[key] = clamp(ui[key] + d, 1, 40); renderMain(); }
+function setTrade(key, val) { ui[key] = val; renderMain(); }
+
+/* ----- Military pane ----- */
+function paneMilitary() {
+  const recruitCost = S.buildings.barracks ? '25 🪙 + 10 🌾' : '35 🪙 + 10 🌾';
+  const maxT = S.buildings.barracks ? 2.5 : 1.5;
+  let h = `<h2>Military</h2>` + sphereBanner('military');
+  h += `<div class="card"><div class="title">⚔️ ${S.troops} troops · training ×${S.training.toFixed(1)} · 🛡️ defense ${defense()}</div>
+    <div class="sub">Walls ${S.buildings.walls}/3 ${S.buildings.barracks ? '· Barracks built' : '· No barracks'} · upkeep ${Math.round(S.troops * 0.4)} 🪙/yr</div>
+    <div class="sub" style="margin-top:4px">${deterrenceText()}</div></div>`;
+  h += `<button ${lockBtns('military')} ${canAfford(S.buildings.barracks ? { gold: 25, food: 10 } : { gold: 35, food: 10 }) ? '' : 'disabled'} onclick="doRecruit()">
+    <span class="bt">🪖 Recruit 10 troops</span><span class="bs">${recruitCost}${S.buildings.barracks ? ' (barracks discount)' : ''}</span></button>`;
+  h += `<button ${lockBtns('military')} ${S.res.gold < 20 || S.training >= maxT ? 'disabled' : ''} onclick="doTrain()">
+    <span class="bt">🎯 Drill the troops</span><span class="bs">20 🪙 · training +0.2 (max ×${maxT}${S.buildings.barracks ? '' : ' — barracks raises cap to ×2.5'})</span></button>`;
+  h += `<button ${lockBtns('military')} ${canAfford(BUILDINGS.walls.cost) && S.buildings.walls < 3 ? '' : 'disabled'} onclick="doFortify()">
+    <span class="bt">🏰 Raise wall ring (${S.buildings.walls}/3)</span><span class="bs">${costStr(BUILDINGS.walls.cost)} · +15 defense</span></button>`;
+  h += `<button ${lockBtns('military')} onclick="forceMenu()"><span class="bt">🎺 Show of force</span><span class="bs">Parade your strength at a border — deterrence &amp; prestige (if you're strong)</span></button>`;
+  h += `<button ${lockBtns('military')} onclick="raidMenu()"><span class="bt">🔥 Launch a raid</span><span class="bs">War! Loot &amp; glory if you win — losses and infamy regardless</span></button>`;
+  h += `<div class="card"><div class="sub">War on this island is about <b>deterrence</b>: neighbors only attack when your defense looks weak (below ~80% of their strength) and relations are poor. Keep walls high, troops drilled, or friends close.</div></div>`;
+  return h;
+}
+function deterrenceText() {
+  const myDef = defense();
+  const threats = NATION_DEFS.filter(d => {
+    const n = nation(d.id);
+    return !n.allied && n.treaty <= 0 && n.rel < 40 && n.strength > myDef * 1.25;
+  });
+  if (threats.length === 0) return '<span class="pos">No neighbor currently dares attack you.</span>';
+  return `<span class="neg">⚠️ ${threats.map(t => t.name).join(' and ')} ${threats.length > 1 ? 'see' : 'sees'} you as weak prey!</span> Raise defense or mend relations.`;
+}
+function forceMenu() {
+  let html = `<h3>🎺 Show of force — choose a border</h3><p class="muted small">Impressive if your raw strength (troops × training = ${Math.round(S.troops * S.training)}) beats theirs. Always −4 relations.</p>`;
+  for (const d of NATION_DEFS) {
+    html += `<button onclick="doShowForce('${d.id}')"><span class="bt">${d.ic} ${d.name}</span></button>`;
+  }
+  html += `<button onclick="closeModal()">Cancel</button>`;
+  openModal(html);
+}
+function raidMenu() {
+  let html = `<h3>🔥 Raid — choose a target</h3><p class="muted small">Victory: loot, +8 prestige, weakens them. Defeat: −30% troops. Either way: −30 relations with the target, −5 with everyone else, breaks pacts.</p>`;
+  for (const d of NATION_DEFS) {
+    const n = nation(d.id);
+    html += `<button ${n.allied ? 'disabled' : ''} onclick="raidConfirm('${d.id}')">
+      <span class="bt">${d.ic} ${d.name}</span><span class="bs">${n.allied ? 'Bound by marriage — unthinkable' : 'Strength: ' + (S.spied[d.id] ? n.strength : 'unknown — send a spy')}</span></button>`;
+  }
+  html += `<button onclick="closeModal()">Cancel</button>`;
+  openModal(html);
+}
+function raidConfirm(id) {
+  openModal(`<h3>⚔️ March on ${ndef(id).name}?</h3>
+    <p class="small">Your host: ${S.troops} troops × ${S.training.toFixed(1)} training. ${S.spied[id] ? `Their strength: ${nation(id).strength}.` : 'Their strength is unknown.'} The dice of war are never certain.</p>
+    <button class="primary" onclick="doRaid('${id}')">Sound the horns</button>
+    <button onclick="closeModal()">Stand down</button>`);
+}
+
+/* ---------------- Boot ---------------- */
+function renderAll() { renderHeader(); renderDots(); renderNav(); renderMain(); }
+
+if (load()) {
+  renderAll();
+  if (!S.eventDone) {
+    // restore the pending event for this year
+    startYearEvent();
+    showEventModal();
+  }
+} else {
+  newGame();
+  renderAll();
+  openModal(`<div class="bigicon">⚜</div><h3 class="center">ISLAND CROWNS</h3>
+    <p>Four nations share one island. You rule <b>Aldoria</b>, a single-city kingdom, through <b>diplomacy, economy, trade and war</b>.</p>
+    <p class="small muted">Each year begins with an event and your reaction to it. Then take one action in each of the four spheres before ending the year. Reach <b>100 prestige</b> or survive <b>50 years</b> to win. Lose your city, starve your people, or let the dynasty die — and the crown falls.</p>
+    <p class="small muted">War is about <b>deterrence</b>: neighbors strike only when you look weak.</p>
+    <button class="primary" onclick="showEventModal()">Begin Your Reign</button>`, true);
+}
+</script>
+</body>
+</html>
